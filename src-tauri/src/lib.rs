@@ -8,8 +8,32 @@ pub mod sync;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .max_file_size(5_000_000)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepOne)
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::Stdout,
+                ))
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("snow-devil".into()),
+                    },
+                ))
+                .build(),
+        )
         .setup(|app| {
             use tauri::Manager;
+
+            // Capture panics to the rotating log file so field crashes leave a
+            // trace instead of vanishing (release has no console window).
+            let default_panic = std::panic::take_hook();
+            std::panic::set_hook(Box::new(move |info| {
+                log::error!("panic: {info}");
+                default_panic(info);
+            }));
+
             let app_dir = app
                 .path()
                 .app_data_dir()
@@ -29,6 +53,7 @@ pub fn run() {
 
             Ok(())
         })
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             // Existing commands
@@ -73,6 +98,9 @@ pub fn run() {
             commands::analytics::save_analytics_sync_state,
             commands::analytics::get_analytics_sync_state,
             commands::diagnostics::get_safe_diagnostics,
+            commands::diagnostics::read_recent_log_tail,
+            commands::update::check_for_update,
+            commands::update::install_update,
             commands::notifications::poll_github_notifications,
             commands::notifications::mark_github_notification_read,
             // Browser commands
