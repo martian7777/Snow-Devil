@@ -27,12 +27,7 @@ function redactedFrontendContext() {
 export async function downloadProblemReport(): Promise<void> {
   const diagnostics = await invoke<SafeDiagnostics>('get_safe_diagnostics');
 
-  let logs = '';
-  try {
-    logs = await invoke<string>('read_recent_log_tail');
-  } catch {
-    logs = '(recent logs unavailable)';
-  }
+  const logs = await invoke<string>('read_recent_log_tail').catch(() => '(recent logs unavailable)');
 
   const generatedAt = new Date().toISOString();
   const bundle = {
