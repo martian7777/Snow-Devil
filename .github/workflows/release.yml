@@ -132,7 +132,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+          # createUpdaterArtifacts is enabled only here (release), not in the base
+          # config, so the unsigned CI smoke build (ci.yml) does not require a key.
+          args: '--target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config {"bundle":{"createUpdaterArtifacts":true}}'
       - name: Verify, rename, and checksum release assets
         run: node scripts/collect-release-artifacts.mjs "${{ matrix.label }}" "${{ matrix.target }}" "${{ needs.release-preflight.outputs.version }}"
       - name: Upload verified platform assets
